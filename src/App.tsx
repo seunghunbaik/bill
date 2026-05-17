@@ -30,15 +30,8 @@ const Nav: React.FC = () => {
           <NavLink to="/add" className={'nav-link nav-add' + (isAdd ? ' active' : '')}>+ 추가</NavLink>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user?.email}
-          </span>
-          <button
-            onClick={handleLogout}
-            style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}
-          >
-            로그아웃
-          </button>
+          <span className="header-user-email">{user?.email}</span>
+          <button className="header-logout" onClick={handleLogout}>로그아웃</button>
         </div>
       </div>
     </header>
