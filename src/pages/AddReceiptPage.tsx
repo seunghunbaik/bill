@@ -55,6 +55,7 @@ const AddReceiptPage: React.FC = () => {
       const result = await recognizeReceipt(compressed, pct => setOcrProgress(pct));
       if (result.amount) setAmount(String(result.amount));
       if (result.date) setDate(result.date);
+      if (result.restaurantName) setRestaurantName(result.restaurantName);
       setOcrDone(true);
     } catch {
       setOcrFailed(true);
