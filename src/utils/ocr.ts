@@ -1,4 +1,4 @@
-import Tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 
 export interface OcrResult {
   rawText: string;
@@ -10,13 +10,16 @@ export const recognizeReceipt = async (
   image: File | string,
   onProgress?: (pct: number) => void,
 ): Promise<OcrResult> => {
-  const { data } = await Tesseract.recognize(image, 'kor+eng', {
-    logger: m => {
+  const worker = await createWorker('kor+eng', 1, {
+    logger: (m: { status: string; progress: number }) => {
       if (m.status === 'recognizing text') {
-        onProgress?.(Math.round((m.progress as number) * 100));
+        onProgress?.(Math.round(m.progress * 100));
       }
     },
   });
+
+  const { data } = await worker.recognize(image);
+  await worker.terminate();
 
   const text = data.text;
   return {
