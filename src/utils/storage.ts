@@ -1,29 +1,37 @@
+import {
+  collection, doc, getDocs, setDoc, deleteDoc, getDoc, query, orderBy,
+} from 'firebase/firestore';
+import { db, auth } from './firebase';
 import { Receipt } from '../types';
 
-const KEY = 'bill_receipts';
-
-export const getReceipts = (): Receipt[] => {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '[]') as Receipt[];
-  } catch {
-    return [];
-  }
+const col = () => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('로그인이 필요합니다.');
+  return collection(db, 'users', uid, 'receipts');
 };
 
-export const saveReceipt = (r: Receipt): void => {
-  localStorage.setItem(KEY, JSON.stringify([...getReceipts(), r]));
+// Firestore는 undefined 필드를 허용하지 않으므로 저장 전 제거
+const strip = (r: Receipt): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined));
+
+export const getReceipts = async (): Promise<Receipt[]> => {
+  const snap = await getDocs(query(col(), orderBy('date', 'asc')));
+  return snap.docs.map(d => d.data() as Receipt);
 };
 
-export const updateReceipt = (updated: Receipt): void => {
-  localStorage.setItem(KEY, JSON.stringify(getReceipts().map(r => r.id === updated.id ? updated : r)));
+export const saveReceipt = async (r: Receipt): Promise<void> => {
+  await setDoc(doc(col(), r.id), strip(r));
 };
 
-export const deleteReceipt = (id: string): void => {
-  localStorage.setItem(KEY, JSON.stringify(getReceipts().filter(r => r.id !== id)));
+export const updateReceipt = async (r: Receipt): Promise<void> => {
+  await setDoc(doc(col(), r.id), strip(r));
 };
 
-export const getReceiptById = (id: string): Receipt | undefined =>
-  getReceipts().find(r => r.id === id);
+export const deleteReceipt = async (id: string): Promise<void> => {
+  await deleteDoc(doc(col(), id));
+};
 
-export const getReceiptsByMonth = (yearMonth: string): Receipt[] =>
-  getReceipts().filter(r => r.date.startsWith(yearMonth));
+export const getReceiptById = async (id: string): Promise<Receipt | undefined> => {
+  const snap = await getDoc(doc(col(), id));
+  return snap.exists() ? (snap.data() as Receipt) : undefined;
+};

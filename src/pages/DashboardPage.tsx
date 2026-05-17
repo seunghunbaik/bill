@@ -23,7 +23,7 @@ const HOLIDAYS_SET = new Set([
 const DashboardPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
 
-  useEffect(() => { setReceipts(getReceipts()); }, []);
+  useEffect(() => { getReceipts().then(setReceipts).catch(() => {}); }, []);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -184,7 +184,7 @@ const DashboardPage: React.FC = () => {
                     : '🧾'}
                 </div>
                 <div className="receipt-info">
-                  <div className="receipt-name">{r.restaurantName || '(식당명 없음)'}</div>
+                  {r.notes && <div className="receipt-name">{r.notes}</div>}
                   <div className="receipt-meta">{formatDate(r.date)}</div>
                 </div>
                 <div className="receipt-amount">{formatCurrency(r.amount)}</div>

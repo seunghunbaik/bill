@@ -4,7 +4,6 @@ export interface OcrResult {
   rawText: string;
   amount: number | null;
   date: string | null; // YYYY-MM-DD
-  restaurantName: string | null;
 }
 
 export const recognizeReceipt = async (
@@ -27,7 +26,6 @@ export const recognizeReceipt = async (
     rawText: text,
     amount: parseAmount(text),
     date: parseDate(text),
-    restaurantName: parseRestaurantName(text),
   };
 };
 
@@ -101,42 +99,3 @@ const parseDate = (text: string): string | null => {
   return null;
 };
 
-// ── 식당명 파싱 ────────────────────────────────────────
-const parseRestaurantName = (text: string): string | null => {
-  // 1순위: 명시적 레이블에서 추출 (배달 주문서, 카드영수증 등)
-  const labelPatterns: [RegExp, number][] = [
-    [/주\s*문\s*매\s*장\s*[:：]\s*(.+)/, 1],
-    [/매\s*장\s*명\s*[:：]\s*(.+)/, 1],
-    [/상\s*호\s*[:：]\s*(.+)/, 1],
-    [/가\s*게\s*명\s*[:：]\s*(.+)/, 1],
-    [/점\s*포\s*명\s*[:：]\s*(.+)/, 1],
-    [/가\s*맹\s*점\s*명?\s*[:：]\s*(.+)/, 1],
-    [/주\s*문\s*업\s*체\s*[:：]\s*(.+)/, 1],
-  ];
-  for (const [pat, grp] of labelPatterns) {
-    const m = text.match(pat);
-    if (m) {
-      // 앞뒤 공백, 줄바꿈, 탭 제거 후 첫 단어만
-      const name = m[grp].split(/[\t\n]/)[0].trim();
-      if (name.length >= 2 && name.length <= 20) return name;
-    }
-  }
-
-  // 2순위: 상단 첫 의미있는 줄 (주소·번호 등 제외)
-  const SKIP = [
-    /사업자/, /등록\s*번호/, /대표/, /주\s*소/, /전\s*화/, /TEL/i, /FAX/i,
-    /영수증/, /RECEIPT/i, /배달/, /주문서/, /요청/,
-    /카드/, /결제/, /합계/, /부가세/, /VAT/i, /품목/, /수량/, /금\s*액/,
-    /고객/, /연락/, /번호/, /포크/, /벨/, /크놀/, /테크/,
-    /^\d/, /^[0-9\-\s]+$/, /감사/, /안녕/,
-  ];
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length >= 2);
-  for (const line of lines.slice(0, 12)) {
-    if (SKIP.some(p => p.test(line))) continue;
-    if (line.length > 20) continue;
-    if (/[가-힣]{2,}/.test(line) || /[a-zA-Z]{3,}/.test(line)) {
-      return line.replace(/[\[\]()（）]/g, '').trim();
-    }
-  }
-  return null;
-};

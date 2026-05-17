@@ -10,8 +10,9 @@ const ReceiptListPage: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [selectedYM, setSelectedYM] = useState(currentYearMonth());
 
-  const load = useCallback(() => {
-    setReceipts(getReceipts().sort((a, b) => b.date.localeCompare(a.date)));
+  const load = useCallback(async () => {
+    const data = await getReceipts().catch(() => [] as Receipt[]);
+    setReceipts(data.sort((a, b) => b.date.localeCompare(a.date)));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -22,18 +23,15 @@ const ReceiptListPage: React.FC = () => {
   const over = total > MONTHLY_LIMIT;
   const [ym_y, ym_m] = selectedYM.split('-');
 
-  const handleDelete = (r: Receipt) => {
-    if (!window.confirm(`"${r.restaurantName || formatDate(r.date)}" 영수증을 삭제할까요?`)) return;
-    deleteReceipt(r.id);
+  const handleDelete = async (r: Receipt) => {
+    if (!window.confirm(`"${formatDate(r.date)}" 영수증을 삭제할까요?`)) return;
+    await deleteReceipt(r.id);
     load();
   };
 
-  const handleExport = () => {
-    if (filtered.length === 0) {
-      alert('내보낼 영수증이 없습니다.');
-      return;
-    }
-    exportMonthlyExcel(filtered, selectedYM);
+  const handleExport = async () => {
+    if (filtered.length === 0) { alert('내보낼 영수증이 없습니다.'); return; }
+    await exportMonthlyExcel(filtered, selectedYM);
   };
 
   return (
@@ -41,19 +39,13 @@ const ReceiptListPage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>영수증 목록</h1>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleExport}
-            className="btn btn-ghost"
-            style={{ padding: '9px 16px', fontSize: 14 }}
-            title="엑셀로 내보내기"
-          >
+          <button onClick={handleExport} className="btn btn-ghost" style={{ padding: '9px 16px', fontSize: 14 }} title="엑셀로 내보내기">
             📊 엑셀 저장
           </button>
           <Link to="/add" className="btn btn-green" style={{ padding: '9px 18px', fontSize: 14 }}>+ 추가</Link>
         </div>
       </div>
 
-      {/* Month filter */}
       {months.length > 0 && (
         <div className="month-bar">
           {months.map(m => (
@@ -64,16 +56,8 @@ const ReceiptListPage: React.FC = () => {
         </div>
       )}
 
-      {/* Summary card */}
       {filtered.length > 0 && (
-        <div
-          className="card"
-          style={{
-            marginBottom: 16,
-            background: over ? 'var(--red-light)' : 'var(--green-light)',
-            border: `1.5px solid ${over ? '#FECACA' : '#A7F3D0'}`,
-          }}
-        >
+        <div className="card" style={{ marginBottom: 16, background: over ? 'var(--red-light)' : 'var(--green-light)', border: `1.5px solid ${over ? '#FECACA' : '#A7F3D0'}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 13, color: over ? 'var(--red)' : 'var(--green-dark)', fontWeight: 600, marginBottom: 2 }}>
@@ -82,28 +66,14 @@ const ReceiptListPage: React.FC = () => {
               <div style={{ fontSize: 24, fontWeight: 900, color: over ? 'var(--red)' : 'var(--green-dark)' }}>
                 {formatCurrency(total)}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                총 {filtered.length}건
-              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>총 {filtered.length}건</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>
-                한도 {formatCurrency(MONTHLY_LIMIT)}
-              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>한도 {formatCurrency(MONTHLY_LIMIT)}</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: over ? 'var(--red)' : 'var(--green-dark)' }}>
-                {over
-                  ? `${formatCurrency(total - MONTHLY_LIMIT)} 초과 ⚠️`
-                  : `${formatCurrency(MONTHLY_LIMIT - total)} 남음`}
+                {over ? `${formatCurrency(total - MONTHLY_LIMIT)} 초과 ⚠️` : `${formatCurrency(MONTHLY_LIMIT - total)} 남음`}
               </div>
-              <button
-                onClick={handleExport}
-                style={{
-                  marginTop: 8, fontSize: 12, padding: '4px 10px',
-                  background: 'transparent', border: `1px solid ${over ? 'var(--red)' : 'var(--green-dark)'}`,
-                  borderRadius: 6, cursor: 'pointer',
-                  color: over ? 'var(--red)' : 'var(--green-dark)', fontWeight: 600,
-                }}
-              >
+              <button onClick={handleExport} style={{ marginTop: 8, fontSize: 12, padding: '4px 10px', background: 'transparent', border: `1px solid ${over ? 'var(--red)' : 'var(--green-dark)'}`, borderRadius: 6, cursor: 'pointer', color: over ? 'var(--red)' : 'var(--green-dark)', fontWeight: 600 }}>
                 📊 엑셀 저장
               </button>
             </div>
@@ -124,7 +94,7 @@ const ReceiptListPage: React.FC = () => {
                 {r.imageData ? <img src={r.imageData} alt="영수증" /> : '🧾'}
               </div>
               <div className="receipt-info">
-                <div className="receipt-name">{r.restaurantName || '(식당명 없음)'}</div>
+                {r.notes && <div className="receipt-name">{r.notes}</div>}
                 <div className="receipt-meta">{formatDate(r.date)}</div>
               </div>
               <div className="receipt-amount">{formatCurrency(r.amount)}</div>
